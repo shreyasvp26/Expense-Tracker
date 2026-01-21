@@ -1,0 +1,210 @@
+EXPENSE TRACKER - CHANGES SUMMARY
+================================================================================
+Date: January 21, 2026
+Type: Critical and Important Bug Fixes
+
+================================================================================
+OVERVIEW
+================================================================================
+
+This document summarizes all changes made to fix critical and important errors
+identified in the comprehensive Expense Tracker review. The fixes address:
+- Database schema mismatches
+- API contract incompatibilities between Flutter and backend
+- Security vulnerabilities
+- Code quality issues
+
+================================================================================
+BACKEND CHANGES
+================================================================================
+
+1. DATABASE SCHEMA FIXES (database.py)
+   ✓ Added missing columns:
+     - transaction_type (String) - Stores "Income" or "Expense"
+     - upi_id (String, unique, indexed) - Prevents duplicate transactions
+     - raw_message (Text) - Stores original SMS content
+   
+   ✓ Changed amount from Float to Numeric(10, 2)
+     - Fixes currency precision issues
+     - Prevents floating-point rounding errors
+   
+   ✓ Added unique constraint on upi_id
+     - Prevents duplicate SMS from creating multiple transactions
+
+   ⚠️  IMPORTANT: Delete expenses.db before running to avoid schema conflicts
+
+2. API ENDPOINT FIXES (main.py)
+   ✓ Fixed 204 response handling
+     - Changed from HTTPException to Response(status_code=204)
+     - Prevents server from logging errors for normal operation
+   
+   ✓ Implemented database dependency injection
+     - Added get_db() function using FastAPI's Depends
+     - Eliminates manual session management
+     - Prevents connection leaks
+   
+   ✓ Added duplicate prevention logic
+     - Checks upi_id before creating new transaction
+     - Returns existing transaction if duplicate found
+   
+   ✓ Added GET /transactions endpoint
+     - Required by Flutter app to fetch transaction list
+     - Returns transactions in descending order (newest first)
+     - Supports limit parameter (default: 100)
+
+3. ML MODEL CONFIGURATION (ml.py)
+   ✓ Replaced hardcoded paths with environment variables
+     - MODEL_PATH and VECTORIZER_PATH now configurable
+     - Falls back to default paths if not set
+     - Improves deployment flexibility
+
+4. SCHEMA CONSISTENCY (schemas.py)
+   ✓ Fixed inconsistent Optional type syntax
+     - Changed "str | None" to "Optional[str]"
+     - Consistent code style throughout
+
+5. PARSER IMPROVEMENTS (parser.py)
+   ✓ Added support for multiple date formats
+     - DD-MM-YYYY, DD/MM/YYYY, DD.MM.YYYY
+     - YYYY-MM-DD (ISO format)
+     - DD-MMM-YYYY, DD-Month-YYYY
+     - DD MMM YYYY, DD Month YYYY
+   - Improves date parsing success rate
+
+6. CONFIGURATION FILES
+   ✓ Created requirements.txt
+     - Lists all Python dependencies
+     - Enables easy installation with "pip install -r requirements.txt"
+   
+   ✓ Created .env.example
+     - Template for environment configuration
+     - Documents required environment variables
+
+================================================================================
+FLUTTER APP CHANGES
+================================================================================
+
+1. API CONTRACT FIXES (main.dart)
+   ✓ Fixed payload field names
+     - Changed "body" to "raw_text"
+     - Matches backend RawMessage schema
+   
+   ✓ Fixed endpoint URL
+     - Changed from "/process-sms" to "/ingest-message"
+     - Matches actual backend endpoint
+   
+   ✓ Fixed timestamp format
+     - Changed from milliseconds to ISO8601 string
+     - Uses DateTime.toIso8601String()
+   
+   ✓ Added missing "source" field
+     - Set to "SMS_LISTENER"
+     - Required by backend schema
+   
+   ✓ Fixed default backend URL
+     - Changed from hardcoded IP (172.30.20.229:8000)
+     - Now uses Android emulator localhost (10.0.2.2:8000)
+     - Works out-of-the-box for development
+
+2. SECURITY IMPROVEMENTS (AndroidManifest.xml)
+   ✓ Removed android:usesCleartextTraffic="true"
+     - Improves security posture
+   
+   ✓ Added network security configuration
+     - Created network_security_config.xml
+     - Allows HTTP for development/testing
+     - Can be easily changed to HTTPS-only for production
+
+================================================================================
+FILES MODIFIED
+================================================================================
+
+Backend:
+  - backend/app/database.py
+  - backend/app/main.py
+  - backend/app/ml.py
+  - backend/app/schemas.py
+  - backend/app/parser.py
+
+Backend (New):
+  - backend/requirements.txt
+  - backend/.env.example
+
+Flutter:
+  - android/lib/main.dart
+  - android/android/app/src/main/AndroidManifest.xml
+
+Flutter (New):
+  - android/android/app/src/main/res/xml/network_security_config.xml
+
+================================================================================
+TESTING INSTRUCTIONS
+================================================================================
+
+1. BACKEND SETUP
+   cd backend
+   rm expenses.db  # Delete old database
+   pip install -r requirements.txt  # Install dependencies
+   python -m uvicorn app.main:app --reload
+
+2. VERIFY DATABASE SCHEMA
+   sqlite3 expenses.db ".schema transactions"
+   # Should show all columns including transaction_type, upi_id, raw_message
+
+3. TEST API ENDPOINTS
+   # Test POST /ingest-message
+   curl -X POST http://localhost:8000/ingest-message \
+     -H "Content-Type: application/json" \
+     -d '{
+       "raw_text": "Debited INR 500.00 from A/C XX1234 on 21-01-26 at AMAZON",
+       "timestamp": "2026-01-21T10:00:00",
+       "source": "SMS_LISTENER",
+       "sender": "HDFCBK"
+     }'
+   
+   # Test GET /transactions
+   curl http://localhost:8000/transactions
+
+4. FLUTTER APP TESTING
+   - Open project in Android Studio or VS Code
+   - Run on Android emulator
+   - Click "Sync SMS" button
+   - Verify SMS are uploaded successfully
+   - Click refresh icon to see transactions
+
+================================================================================
+WHAT STILL NEEDS TO BE DONE (FUTURE ENHANCEMENTS)
+================================================================================
+
+These items were identified in the review but are NOT critical/important:
+- Add user authentication (JWT tokens)
+- Implement database migrations (Alembic)
+- Add comprehensive test suite
+- Build web dashboard
+- Switch to PostgreSQL for production
+- Add analytics endpoints
+- Implement rate limiting
+- Add monitoring and logging
+- Deploy to cloud
+
+================================================================================
+SUMMARY
+================================================================================
+
+✓ Fixed 9 backend critical issues
+✓ Fixed 6 Flutter app critical issues
+✓ Added 3 minor improvements
+✓ Created 3 new configuration files
+
+The system should now be functional with:
+- Correct database schema matching the code
+- Working API communication between Flutter and backend
+- Duplicate prevention
+- Better date parsing
+- Improved security configuration
+- Proper dependency management
+
+All critical and important errors from the review have been addressed.
+The system is now ready for development and testing.
+
+================================================================================

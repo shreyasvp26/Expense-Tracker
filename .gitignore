@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+.env
+
+# Android / Flutter build outputs
+android/.gradle/
+android/build/
+android/app/build/
+android/app/intermediates/
+android/app/.cxx/
+android/local.properties
+
+# Flutter
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
